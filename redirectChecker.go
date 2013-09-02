@@ -28,6 +28,16 @@ type redirectResult struct {
 	Error            error
 }
 
+func (rr *redirectResult) AppendIntermediate(nextUrl string, redirected string, code int) {
+	intermediateUrl := actualRedirect{
+		OriginUrl:     nextUrl,
+		RedirectedUrl: redirected,
+		ErrorCode:     code,
+	}
+
+	rr.IntermediateUrls = append(rr.IntermediateUrls, intermediateUrl)
+}
+
 func readCsv(name string) []redirectInfo {
 	csvFile, err := os.Open(name)
 	defer csvFile.Close()
@@ -55,13 +65,18 @@ func readCsv(name string) []redirectInfo {
 }
 
 func checkUrl(info redirectInfo) redirectResult {
-	currentUrl := info.Url
-	expected := info.ExpectedUrl
 
-	redirects := 0
-	nextUrl := currentUrl
+	result := redirectResult{
+		Url:              info.Url,
+		ExpectedUrl:      info.ExpectedUrl,
+		Redirects:        0,
+		IntermediateUrls: make([]actualRedirect, 0),
+		Error:            nil,
+	}
+
+	nextUrl := info.Url
 	for {
-		if redirects > 5 {
+		if result.Redirects > 5 {
 			break
 		}
 
@@ -69,23 +84,21 @@ func checkUrl(info redirectInfo) redirectResult {
 		resp, err := http.DefaultTransport.RoundTrip(req)
 
 		if err != nil {
+			result.Error = err
 			break
 		}
+
+		redirectTo := resp.Header.Get("Location")
+		result.AppendIntermediate(nextUrl, redirectTo, resp.StatusCode)
+		result.FinalUrl = nextUrl
 
 		if resp.StatusCode != 301 {
 			break
 		}
 
-		redirects++
-	}
+		result.Redirects++
 
-	result := redirectResult{
-		Url:         currentUrl,
-		ExpectedUrl: expected,
-		Redirects:   redirects,
-		//IntermediateUrls:
-		//FinalUrl: ,
-		//Error: err,
+		nextUrl = redirectTo
 	}
 
 	return result
@@ -94,8 +107,6 @@ func checkUrl(info redirectInfo) redirectResult {
 func main() {
 	redirects := readCsv("301s.csv")
 
-	fmt.Println(redirects)
-
 	log := make([]redirectResult, 0)
 
 	for _, info := range redirects {
@@ -103,5 +114,13 @@ func main() {
 		log = append(log, result)
 	}
 
-	fmt.Println(log)
+	for _, logItem := range log {
+		fmt.Printf("Original Url: %v\n", logItem.Url)
+		fmt.Printf("Final Url: %v\n", logItem.FinalUrl)
+		fmt.Printf("Expected Url: %v\n", logItem.ExpectedUrl)
+		fmt.Printf("Number of Redirects: %v\n", logItem.Redirects)
+		fmt.Printf("\n")
+	}
+
+	//fmt.Println(log)
 }
