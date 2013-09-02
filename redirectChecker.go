@@ -8,6 +8,10 @@ import (
 	"os"
 )
 
+const (
+	MaxRedirects = 10
+)
+
 type redirectInfo struct {
 	Url         string
 	ExpectedUrl string
@@ -36,6 +40,20 @@ func (rr *redirectResult) AppendIntermediate(nextUrl string, redirected string, 
 	}
 
 	rr.IntermediateUrls = append(rr.IntermediateUrls, intermediateUrl)
+}
+
+func (rr *redirectResult) LooksLikeRedirectLoop() bool {
+
+	urls := make(map[string]int)
+	for _, url := range rr.IntermediateUrls {
+		if urls[url.OriginUrl] != 0 {
+			return true
+		}
+
+		urls[url.OriginUrl]++
+	}
+
+	return false
 }
 
 func readCsv(name string) []redirectInfo {
@@ -76,7 +94,7 @@ func checkUrl(info redirectInfo) redirectResult {
 
 	nextUrl := info.Url
 	for {
-		if result.Redirects > 5 {
+		if result.Redirects >= MaxRedirects {
 			break
 		}
 
@@ -93,6 +111,10 @@ func checkUrl(info redirectInfo) redirectResult {
 		result.FinalUrl = nextUrl
 
 		if resp.StatusCode != 301 {
+			break
+		}
+
+		if result.LooksLikeRedirectLoop() {
 			break
 		}
 
@@ -115,12 +137,17 @@ func main() {
 	}
 
 	for _, logItem := range log {
-		fmt.Printf("Original Url: %v\n", logItem.Url)
-		fmt.Printf("Final Url: %v\n", logItem.FinalUrl)
-		fmt.Printf("Expected Url: %v\n", logItem.ExpectedUrl)
-		fmt.Printf("Number of Redirects: %v\n", logItem.Redirects)
-		fmt.Printf("\n")
-	}
 
-	//fmt.Println(log)
+		if logItem.FinalUrl == logItem.ExpectedUrl {
+			fmt.Printf("OK: %v Matched\n", logItem.Url)
+			continue
+		}
+
+		if logItem.LooksLikeRedirectLoop() {
+			fmt.Printf("LOOP: %v Redirect Loop? Stopped after %v redirects\n", logItem.Url, logItem.Redirects)
+			continue
+		}
+
+		fmt.Printf("ERR: %v Unexpected destination: %v\n", logItem.Url, logItem.FinalUrl)
+	}
 }
