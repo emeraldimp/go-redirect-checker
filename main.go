@@ -10,6 +10,8 @@ const (
 )
 
 func main() {
+	maxRedirects := flag.Int("max-redirects", MaxRedirects, "The maximum number of redirects to follow before giving up (excluding detected loops)")
+
 	flag.Parse()
 
 	filename := flag.Arg(0)
@@ -23,7 +25,7 @@ func main() {
 	log := make([]redirectResult, 0)
 
 	for _, info := range redirects {
-		result := CheckUrl(info)
+		result := CheckUrl(info, *maxRedirects)
 		log = append(log, result)
 	}
 

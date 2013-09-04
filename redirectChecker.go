@@ -77,7 +77,7 @@ func ReadCsv(name string) []redirectInfo {
 	return result
 }
 
-func CheckUrl(info redirectInfo) redirectResult {
+func CheckUrl(info redirectInfo, maxRedirects int) redirectResult {
 
 	result := redirectResult{
 		Url:              info.Url,
@@ -89,7 +89,7 @@ func CheckUrl(info redirectInfo) redirectResult {
 
 	nextUrl := info.Url
 	for {
-		if result.Redirects >= MaxRedirects {
+		if result.Redirects >= maxRedirects {
 			break
 		}
 
