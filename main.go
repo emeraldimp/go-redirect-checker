@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"flag"
 )
 
 const (
@@ -9,7 +10,15 @@ const (
 )
 
 func main() {
-	redirects := ReadCsv("301s.csv")
+	flag.Parse()
+
+	filename := flag.Arg(0)
+
+	if filename == "" {
+		filename = "301s.csv"
+	}
+
+	redirects := ReadCsv(filename)
 
 	log := make([]redirectResult, 0)
 
