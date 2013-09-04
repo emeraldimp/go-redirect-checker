@@ -51,13 +51,14 @@ func (rr *redirectResult) LooksLikeRedirectLoop() bool {
 	return false
 }
 
-func ReadCsv(name string) []redirectInfo {
+func ReadCsv(name string) ([]redirectInfo, error) {
 	csvFile, err := os.Open(name)
-	defer csvFile.Close()
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
+	defer csvFile.Close()
 
 	csvReader := csv.NewReader(csvFile)
 	result := make([]redirectInfo, 0)
@@ -74,7 +75,7 @@ func ReadCsv(name string) []redirectInfo {
 		result = append(result, info)
 	}
 
-	return result
+	return result, nil
 }
 
 func CheckUrl(info redirectInfo, maxRedirects int) redirectResult {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"flag"
+	"os"
 )
 
 const (
@@ -20,7 +21,12 @@ func main() {
 		filename = "301s.csv"
 	}
 
-	redirects := ReadCsv(filename)
+	redirects, err := ReadCsv(filename)
+
+	if err != nil {
+		fmt.Printf("Error reading file: %s\n", err)
+		os.Exit(1)
+	}
 
 	log := make([]redirectResult, 0)
 
