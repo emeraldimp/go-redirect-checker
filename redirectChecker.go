@@ -2,14 +2,9 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
-)
-
-const (
-	MaxRedirects = 10
 )
 
 type redirectInfo struct {
@@ -56,7 +51,7 @@ func (rr *redirectResult) LooksLikeRedirectLoop() bool {
 	return false
 }
 
-func readCsv(name string) []redirectInfo {
+func ReadCsv(name string) []redirectInfo {
 	csvFile, err := os.Open(name)
 	defer csvFile.Close()
 
@@ -82,7 +77,7 @@ func readCsv(name string) []redirectInfo {
 	return result
 }
 
-func checkUrl(info redirectInfo) redirectResult {
+func CheckUrl(info redirectInfo) redirectResult {
 
 	result := redirectResult{
 		Url:              info.Url,
@@ -124,30 +119,4 @@ func checkUrl(info redirectInfo) redirectResult {
 	}
 
 	return result
-}
-
-func main() {
-	redirects := readCsv("301s.csv")
-
-	log := make([]redirectResult, 0)
-
-	for _, info := range redirects {
-		result := checkUrl(info)
-		log = append(log, result)
-	}
-
-	for _, logItem := range log {
-
-		if logItem.FinalUrl == logItem.ExpectedUrl {
-			fmt.Printf("OK: %v Matched\n", logItem.Url)
-			continue
-		}
-
-		if logItem.LooksLikeRedirectLoop() {
-			fmt.Printf("LOOP: %v Redirect Loop? Stopped after %v redirects\n", logItem.Url, logItem.Redirects)
-			continue
-		}
-
-		fmt.Printf("ERR: %v Unexpected destination: %v\n", logItem.Url, logItem.FinalUrl)
-	}
 }
